@@ -61,10 +61,12 @@ export default function AuthPage({ onEmployeeCreated }) {
       const empId = await generateEmployeeId();
 
       const { data: empData, error: empError } = await supabase
-        .from('employees')
-        .insert({ id: userId, name: form.name.trim(), email: form.email.trim(), employee_id: empId })
-        .select()
-        .single();
+        .rpc('create_employee', {
+          p_id: userId,
+          p_name: form.name.trim(),
+          p_email: form.email.trim(),
+          p_employee_id: empId
+        });
 
       if (empError) throw empError;
 
