@@ -2,25 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import AuthPage from './components/AuthPage';
 import Dashboard from './components/Dashboard';
+import AdminDashboard from './components/AdminDashboard';
+
+const ADMIN_EMAIL = process.env.REACT_APP_ADMIN_EMAIL;
 
 export default function App() {
   const [session, setSession] = useState(null);
   const [employee, setEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) fetchEmployee(session.user);
+      if (session) init(session);
       else setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       if (session) {
-        await fetchEmployee(session.user);
+        await init(session);
       } else {
         setEmployee(null);
+        setIsAdmin(false);
         setLoading(false);
       }
     });
@@ -28,13 +33,21 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  async function fetchEmployee(user) {
+  async function init(session) {
     setLoading(true);
+    const email = session.user.email;
+
+    if (email === ADMIN_EMAIL) {
+      setIsAdmin(true);
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('employees')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', session.user.id)
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
@@ -46,8 +59,8 @@ export default function App() {
     }
   }
 
-  function handleEmployeeCreated(emp) {
-    setEmployee(emp);
+  function handleSignOut() {
+    supabase.auth.signOut();
   }
 
   if (loading) {
@@ -59,9 +72,9 @@ export default function App() {
     );
   }
 
-  if (!session) {
-    return <AuthPage onEmployeeCreated={handleEmployeeCreated} />;
-  }
+  if (!session) return <AuthPage />;
+
+  if (isAdmin) return <AdminDashboard onSignOut={handleSignOut} />;
 
   if (!employee) {
     return (
@@ -72,11 +85,5 @@ export default function App() {
     );
   }
 
-  return (
-    <Dashboard
-      employee={employee}
-      session={session}
-      onSignOut={() => supabase.auth.signOut()}
-    />
-  );
+  return <Dashboard employee={employee} onSignOut={handleSignOut} />;
 }
