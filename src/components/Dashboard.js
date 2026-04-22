@@ -17,10 +17,6 @@ function formatTime(timeStr) {
   return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
-function formatDate(date) {
-  return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    .split('/').join('/');
-}
 
 function getDayName(date) {
   return date.toLocaleDateString('en-US', { weekday: 'long' });
